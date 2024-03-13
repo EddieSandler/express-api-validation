@@ -4,7 +4,8 @@ const Book = require("../models/book");
 const jsonschema = require("jsonschema");
 const ExpressError = require("../expressError");
 const bookSchema = require("../schemas/bookSchema");
-
+const bookSchemaUpdated = require("../schemas/bookSchemaUpdated");
+const { validate } = require("jsonschema");
 
 
 
@@ -53,12 +54,20 @@ router.post("/", async function (req, res, next) {
 
 router.put("/:isbn", async function (req, res, next) {
 
+
     try {
-      const result = await jsonschema.validate(req.body, bookSchema);
-      if (!result.valid) {
-        let listOfErrors = result.errors.map(error => error.stack);
-        let error = new ExpressError(listOfErrors, 400);
-        return next(error);
+      if ("isbn" in req.body) {
+        return next({
+          status: 400,
+          message: "Not allowed"
+        });
+      }
+      const validation = validate(req.body, bookSchemaUpdated);
+      if (!validation.valid) {
+        return next({
+          status: 400,
+          errors: validation.errors.map(e => e.stack)
+        });
       }
     const book = await Book.update(req.params.isbn, req.body);
     return res.json({ book });
